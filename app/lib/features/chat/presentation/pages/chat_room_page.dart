@@ -216,8 +216,12 @@ class _MessageBubble extends StatelessWidget {
               padding: const EdgeInsets.all(AppTheme.space4),
               decoration: BoxDecoration(
                 gradient: AppColors.gradientSnowPearl,
-                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-                borderBottomLeftRadius: Radius.circular(AppTheme.radiusSm),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(AppTheme.radiusLg),
+                  topRight: Radius.circular(AppTheme.radiusLg),
+                  bottomRight: Radius.circular(AppTheme.radiusLg),
+                  bottomLeft: Radius.circular(AppTheme.radiusSm),
+                ),
                 boxShadow: AppTheme.glowSoft,
               ),
               child: Column(

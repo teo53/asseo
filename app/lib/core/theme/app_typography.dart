@@ -5,7 +5,8 @@ import 'app_colors.dart';
 class AppTypography {
   AppTypography._();
 
-  static const String fontFamily = 'Pretendard';
+  // Using system default font (Pretendard can be added later)
+  static const String? fontFamily = null;
 
   // ============================================
   // Text Styles
