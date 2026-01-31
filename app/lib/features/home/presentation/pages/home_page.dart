@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../core/widgets/unoa_logo.dart';
 
 /// 홈 페이지
 class HomePage extends ConsumerStatefulWidget {
@@ -130,26 +131,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                               ),
                             );
                           },
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'MOE',
-                                style: AppTypography.heading1.copyWith(
-                                  fontWeight: FontWeight.w200,
-                                  letterSpacing: 4,
-                                  height: 1.0,
-                                ),
-                              ),
-                              Text(
-                                'BACKSTAGE',
-                                style: AppTypography.heading3.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                            ],
-                          ),
+                          child: const UnoaLogo.header(),
                         ),
                         const Spacer(),
                         // 알림 버튼
@@ -178,7 +160,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
-                                    color: AppColors.statusError,
+                                    color: AppColors.accentRed,
                                     shape: BoxShape.circle,
                                   ),
                                   constraints: const BoxConstraints(

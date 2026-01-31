@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// MOE BACKSTAGE 컬러 시스템
-/// 디자인 컨셉: "Dreamlike Snow" (몽환적인 눈)
+/// UNOA 컬러 시스템
+/// 디자인 컨셉: "Dreamlike Snow" with Red Accent
 class AppColors {
   AppColors._();
 
@@ -28,6 +28,14 @@ class AppColors {
   static const Color accentPearl = Color(0xD9FFFFFF); // 85% opacity
   static const Color accentGlow = Color(0x26FFFFFF); // 15% opacity
   static const Color accentShimmer = Color(0x4DC8C8DC); // 30% opacity
+
+  // ============================================
+  // Brand Accent - Red (UNOA 'o' highlight)
+  // ============================================
+  static const Color accentRed = Color(0xFFFF4757);
+  static const Color accentRedLight = Color(0xFFFF6B7A);
+  static const Color accentRedDark = Color(0xFFE84141);
+  static const Color accentRedGlow = Color(0x40FF4757); // 25% opacity
 
   // ============================================
   // Semantic Colors

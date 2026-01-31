@@ -5,7 +5,7 @@ import 'app_typography.dart';
 export 'app_colors.dart';
 export 'app_typography.dart';
 
-/// MOE BACKSTAGE 앱 테마
+/// UNOA 앱 테마
 class AppTheme {
   AppTheme._();
 

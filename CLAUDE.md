@@ -1,10 +1,10 @@
-# CLAUDE.md - MOE BACKSTAGE Codebase Guide
+# CLAUDE.md - UNOA Codebase Guide
 
-This document provides comprehensive guidance for AI assistants working with the MOE BACKSTAGE codebase.
+This document provides comprehensive guidance for AI assistants working with the UNOA codebase.
 
 ## Project Overview
 
-**MOE BACKSTAGE** (모에 백스테이지) is a specialized fan communication app for underground idol (지하아이돌) and maid culture enthusiasts. It enables private messaging between fans and creators, subscription-based tiers, and an in-app currency system (DreamTime) for donations.
+**UNOA** (유노아) is a private fan communication app. It enables private messaging between fans and creators, subscription-based tiers, and an in-app currency system (DreamTime) for donations.
 
 - **Version:** 1.0.0
 - **Primary Language:** Dart (Flutter) + TypeScript (Edge Functions)
