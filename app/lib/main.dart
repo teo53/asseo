@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config/env.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/unoa_logo.dart';
 
 /// 데모 모드 여부 (Supabase 연결 실패 시 true)
 bool isDemoMode = false;
@@ -37,20 +38,20 @@ void main() async {
 
   runApp(
     const ProviderScope(
-      child: MoeBackstageApp(),
+      child: UnoaApp(),
     ),
   );
 }
 
-class MoeBackstageApp extends ConsumerWidget {
-  const MoeBackstageApp({super.key});
+class UnoaApp extends ConsumerWidget {
+  const UnoaApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // 데모 모드에서는 단순한 UI 표시
     if (isDemoMode) {
       return MaterialApp(
-        title: 'MOE BACKSTAGE',
+        title: 'UNOA',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
         home: const DemoHomePage(),
@@ -60,7 +61,7 @@ class MoeBackstageApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'MOE BACKSTAGE',
+      title: 'UNOA',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       routerConfig: router,
@@ -99,37 +100,35 @@ class DemoHomePage extends StatelessWidget {
                   gradient: AppColors.gradientSnowPearl,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.white.withOpacity(0.2),
+                      color: AppColors.accentRedGlow,
                       blurRadius: 30,
                       spreadRadius: 5,
                     ),
+                    BoxShadow(
+                      color: Colors.white.withOpacity(0.2),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  size: 60,
-                  color: AppColors.deepNight,
+                child: Center(
+                  child: Text(
+                    'U',
+                    style: TextStyle(
+                      fontSize: 56,
+                      fontWeight: FontWeight.w300,
+                      color: AppColors.deepNight,
+                      height: 1.0,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 32),
               // 앱 타이틀
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [AppColors.snowPure, AppColors.snowPearl],
-                ).createShader(bounds),
-                child: const Text(
-                  'MOE BACKSTAGE',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w300,
-                    letterSpacing: 4,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+              const UnoaLogo.splash(),
               const SizedBox(height: 8),
               Text(
-                '지하아이돌 · 메이드 팬 커뮤니케이션',
+                'Private Fan Communication',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.white.withOpacity(0.6),

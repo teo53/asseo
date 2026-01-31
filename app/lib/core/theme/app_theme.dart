@@ -5,7 +5,7 @@ import 'app_typography.dart';
 export 'app_colors.dart';
 export 'app_typography.dart';
 
-/// MOE BACKSTAGE 앱 테마
+/// UNOA 앱 테마
 class AppTheme {
   AppTheme._();
 
@@ -129,7 +129,7 @@ class AppTheme {
       ),
 
       // Card
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: AppColors.deepShadow,
         elevation: 0,
         shape: RoundedRectangleBorder(

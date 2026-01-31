@@ -4,10 +4,25 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Allowed origins for CORS - configure based on environment
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || 'http://localhost:3000,https://moe-backstage.app').split(',')
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') || ''
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  }
 }
+
+// Input validation constants
+const MIN_DONATION_AMOUNT = 100
+const MAX_DONATION_AMOUNT = 10000000
+const MAX_MESSAGE_LENGTH = 1000
+const VALID_CONTEXT_TYPES = ['dm', 'feed', 'content', 'live']
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // Content moderation patterns
 const BLOCKED_PATTERNS = {
@@ -78,6 +93,8 @@ function getBlockReason(patterns: string[]): string {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -92,13 +109,22 @@ serve(async (req) => {
     const path = url.pathname.split('/').pop()
 
     if (req.method === 'POST') {
-      const body = await req.json()
+      // Parse JSON with error handling
+      let body: any
+      try {
+        body = await req.json()
+      } catch {
+        return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
 
       switch (path) {
         case 'commit': {
           // Commit a donation
           const authHeader = req.headers.get('Authorization')
-          if (!authHeader) {
+          if (!authHeader?.startsWith('Bearer ')) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
               status: 401,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -106,7 +132,7 @@ serve(async (req) => {
           }
 
           const { data: { user }, error: authError } = await supabase.auth.getUser(
-            authHeader.replace('Bearer ', '')
+            authHeader.substring(7)
           )
 
           if (authError || !user) {
@@ -133,15 +159,51 @@ serve(async (req) => {
             })
           }
 
-          // Validate amount
-          if (dtAmount <= 0) {
-            return new Response(JSON.stringify({ error: 'Invalid amount' }), {
+          // Validate UUID formats
+          if (!UUID_REGEX.test(toCreatorId) || !UUID_REGEX.test(contextId)) {
+            return new Response(JSON.stringify({ error: 'Invalid ID format' }), {
               status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             })
           }
 
-          // Validate creator exists and is a creator
+          // Validate context type
+          if (!VALID_CONTEXT_TYPES.includes(contextType)) {
+            return new Response(JSON.stringify({ error: 'Invalid context type' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+
+          // Validate amount
+          if (typeof dtAmount !== 'number' || dtAmount < MIN_DONATION_AMOUNT || dtAmount > MAX_DONATION_AMOUNT) {
+            return new Response(JSON.stringify({
+              error: `Amount must be between ${MIN_DONATION_AMOUNT} and ${MAX_DONATION_AMOUNT.toLocaleString()} DT`
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+
+          // Validate message length
+          if (message && message.length > MAX_MESSAGE_LENGTH) {
+            return new Response(JSON.stringify({
+              error: `Message too long (max ${MAX_MESSAGE_LENGTH} characters)`
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+
+          // Prevent self-donation
+          if (user.id === toCreatorId) {
+            return new Response(JSON.stringify({ error: 'Cannot donate to yourself' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+
+          // Validate creator exists and has CAST role
           const { data: creator } = await supabase
             .from('profiles')
             .select('id, role')
@@ -151,6 +213,14 @@ serve(async (req) => {
           if (!creator) {
             return new Response(JSON.stringify({ error: 'Creator not found' }), {
               status: 404,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+
+          // Verify the recipient is a creator
+          if (creator.role !== 'CAST') {
+            return new Response(JSON.stringify({ error: 'Recipient is not a creator' }), {
+              status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             })
           }
@@ -247,8 +317,8 @@ serve(async (req) => {
           }
 
           const type = url.searchParams.get('type') || 'sent' // 'sent' or 'received'
-          const limit = parseInt(url.searchParams.get('limit') || '20')
-          const offset = parseInt(url.searchParams.get('offset') || '0')
+          const limit = Math.min(parseInt(url.searchParams.get('limit') || '20') || 20, 100) // Max 100 items
+          const offset = Math.min(parseInt(url.searchParams.get('offset') || '0') || 0, 10000) // Max offset 10000
 
           let query = supabase
             .from('dt_donations')

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
-/// MOE BACKSTAGE 타이포그래피 시스템
+/// UNOA 타이포그래피 시스템
 class AppTypography {
   AppTypography._();
 

@@ -45,14 +45,13 @@ class DreamTimeService {
     var query = _supabase
         .from('dt_lots')
         .select()
-        .eq('user_id', userId)
-        .order('purchased_at', ascending: true);
+        .eq('user_id', userId);
 
     if (activeOnly) {
       query = query.eq('status', 'active');
     }
 
-    final response = await query;
+    final response = await query.order('purchased_at', ascending: true);
     return (response as List).map((e) => DtLot.fromJson(e)).toList();
   }
 
