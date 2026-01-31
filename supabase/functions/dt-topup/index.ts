@@ -4,10 +4,24 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Allowed origins for CORS - configure based on environment
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || 'http://localhost:3000,https://moe-backstage.app').split(',')
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') || ''
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  }
 }
+
+// Input validation constants
+const MIN_TOPUP_AMOUNT = 100
+const MAX_TOPUP_AMOUNT = 10000000 // 10M DT
+const VALID_CHANNELS = ['web', 'ios', 'android']
+const VALID_PROVIDERS = ['mock', 'portone', 'toss']
 
 // Payment provider interface
 interface PaymentProvider {
@@ -165,6 +179,8 @@ function calculatePrice(dtAmount: number, channel: string, vatIncluded: boolean 
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -181,12 +197,40 @@ serve(async (req) => {
 
     // Route handling
     if (req.method === 'POST') {
-      const body = await req.json()
+      // Parse JSON with error handling
+      let body: any
+      try {
+        body = await req.json()
+      } catch {
+        return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
 
       switch (path) {
         case 'quote': {
           // Get price quote without creating order
           const { dtAmount, channel = 'web' } = body
+
+          // Validate amount
+          if (typeof dtAmount !== 'number' || dtAmount < MIN_TOPUP_AMOUNT || dtAmount > MAX_TOPUP_AMOUNT) {
+            return new Response(JSON.stringify({
+              error: `Amount must be between ${MIN_TOPUP_AMOUNT} and ${MAX_TOPUP_AMOUNT.toLocaleString()} DT`
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+
+          // Validate channel
+          if (!VALID_CHANNELS.includes(channel)) {
+            return new Response(JSON.stringify({ error: 'Invalid channel' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+
           const { priceKrw, vatAmount } = calculatePrice(dtAmount, channel)
 
           return new Response(
@@ -209,7 +253,7 @@ serve(async (req) => {
         case 'create': {
           // Create top-up order
           const authHeader = req.headers.get('Authorization')
-          if (!authHeader) {
+          if (!authHeader?.startsWith('Bearer ')) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
               status: 401,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -218,7 +262,7 @@ serve(async (req) => {
 
           // Verify user
           const { data: { user }, error: authError } = await supabase.auth.getUser(
-            authHeader.replace('Bearer ', '')
+            authHeader.substring(7) // Remove 'Bearer ' prefix
           )
 
           if (authError || !user) {
@@ -231,8 +275,25 @@ serve(async (req) => {
           const { dtAmount, channel = 'web', provider = 'mock' } = body
 
           // Validate amount
-          if (!dtAmount || dtAmount <= 0) {
-            return new Response(JSON.stringify({ error: 'Invalid amount' }), {
+          if (typeof dtAmount !== 'number' || dtAmount < MIN_TOPUP_AMOUNT || dtAmount > MAX_TOPUP_AMOUNT) {
+            return new Response(JSON.stringify({
+              error: `Amount must be between ${MIN_TOPUP_AMOUNT} and ${MAX_TOPUP_AMOUNT.toLocaleString()} DT`
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+
+          // Validate channel and provider
+          if (!VALID_CHANNELS.includes(channel)) {
+            return new Response(JSON.stringify({ error: 'Invalid channel' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+
+          if (!VALID_PROVIDERS.includes(provider)) {
+            return new Response(JSON.stringify({ error: 'Invalid provider' }), {
               status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             })

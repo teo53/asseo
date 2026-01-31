@@ -4,12 +4,26 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Allowed origins for CORS - configure based on environment
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') || 'http://localhost:3000,https://moe-backstage.app').split(',')
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') || ''
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  }
 }
 
+// Input validation
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const MAX_REASON_LENGTH = 500
+
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req)
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -24,13 +38,22 @@ serve(async (req) => {
     const path = url.pathname.split('/').pop()
 
     if (req.method === 'POST') {
-      const body = await req.json()
+      // Parse JSON with error handling
+      let body: any
+      try {
+        body = await req.json()
+      } catch {
+        return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
 
       switch (path) {
         case 'check-eligibility': {
           // Check if a topup order is eligible for refund
           const authHeader = req.headers.get('Authorization')
-          if (!authHeader) {
+          if (!authHeader?.startsWith('Bearer ')) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
               status: 401,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -38,7 +61,7 @@ serve(async (req) => {
           }
 
           const { data: { user } } = await supabase.auth.getUser(
-            authHeader.replace('Bearer ', '')
+            authHeader.substring(7)
           )
 
           if (!user) {
@@ -49,6 +72,14 @@ serve(async (req) => {
           }
 
           const { topupOrderId } = body
+
+          // Validate UUID format
+          if (!topupOrderId || !UUID_REGEX.test(topupOrderId)) {
+            return new Response(JSON.stringify({ error: 'Invalid order ID format' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
 
           // Verify user owns the order
           const { data: order } = await supabase
@@ -82,7 +113,7 @@ serve(async (req) => {
         case 'request': {
           // Request a refund
           const authHeader = req.headers.get('Authorization')
-          if (!authHeader) {
+          if (!authHeader?.startsWith('Bearer ')) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
               status: 401,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -90,7 +121,7 @@ serve(async (req) => {
           }
 
           const { data: { user } } = await supabase.auth.getUser(
-            authHeader.replace('Bearer ', '')
+            authHeader.substring(7)
           )
 
           if (!user) {
@@ -101,6 +132,24 @@ serve(async (req) => {
           }
 
           const { topupOrderId, reason } = body
+
+          // Validate UUID format
+          if (!topupOrderId || !UUID_REGEX.test(topupOrderId)) {
+            return new Response(JSON.stringify({ error: 'Invalid order ID format' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+
+          // Validate reason length
+          if (reason && reason.length > MAX_REASON_LENGTH) {
+            return new Response(JSON.stringify({
+              error: `Reason too long (max ${MAX_REASON_LENGTH} characters)`
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
 
           // Verify user owns the order
           const { data: order } = await supabase
@@ -165,7 +214,7 @@ serve(async (req) => {
         case 'process': {
           // Admin: Process a refund request
           const authHeader = req.headers.get('Authorization')
-          if (!authHeader) {
+          if (!authHeader?.startsWith('Bearer ')) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
               status: 401,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -173,7 +222,7 @@ serve(async (req) => {
           }
 
           const { data: { user } } = await supabase.auth.getUser(
-            authHeader.replace('Bearer ', '')
+            authHeader.substring(7)
           )
 
           if (!user) {
@@ -190,7 +239,7 @@ serve(async (req) => {
             .eq('id', user.id)
             .single()
 
-          if (!profile || profile.role !== 'admin') {
+          if (!profile || profile.role !== 'ADMIN') {
             return new Response(JSON.stringify({ error: 'Admin access required' }), {
               status: 403,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -198,6 +247,14 @@ serve(async (req) => {
           }
 
           const { refundRequestId } = body
+
+          // Validate UUID format
+          if (!refundRequestId || !UUID_REGEX.test(refundRequestId)) {
+            return new Response(JSON.stringify({ error: 'Invalid refund request ID format' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
 
           // Process refund using database function
           const { data: result, error: processError } = await supabase.rpc('dt_process_refund', {
@@ -242,7 +299,7 @@ serve(async (req) => {
         case 'requests': {
           // Get refund requests (user's own or admin's list)
           const authHeader = req.headers.get('Authorization')
-          if (!authHeader) {
+          if (!authHeader?.startsWith('Bearer ')) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
               status: 401,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -250,7 +307,7 @@ serve(async (req) => {
           }
 
           const { data: { user } } = await supabase.auth.getUser(
-            authHeader.replace('Bearer ', '')
+            authHeader.substring(7)
           )
 
           if (!user) {
