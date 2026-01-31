@@ -1,0 +1,66 @@
+name: moe_backstage
+description: 지하아이돌·메이드 문화 특화 팬 커뮤니케이션 앱
+
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Supabase
+  supabase_flutter: ^2.3.0
+
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+
+  # Routing
+  go_router: ^13.0.0
+
+  # UI/UX
+  flutter_animate: ^4.3.0
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.1
+  flutter_svg: ^2.0.9
+
+  # Storage
+  shared_preferences: ^2.2.2
+  flutter_secure_storage: ^9.0.0
+
+  # Utils
+  intl: ^0.18.1
+  timeago: ^3.6.1
+  url_launcher: ^6.2.2
+  image_picker: ^1.0.5
+  permission_handler: ^11.1.0
+
+  # Icons
+  iconsax: ^0.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.1
+  riverpod_generator: ^2.3.9
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
+
+flutter:
+  uses-material-design: true
+
+  # Assets disabled until files are added
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
+
+  # Custom fonts disabled - using system fonts
+  # fonts:
+  #   - family: Pretendard
+  #     fonts:
+  #       - asset: assets/fonts/Pretendard-Light.otf
+  #         weight: 300
