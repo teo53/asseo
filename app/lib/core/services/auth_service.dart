@@ -62,6 +62,9 @@ class AuthService {
 
   /// 현재 사용자
   User? get currentUser => _supabase.auth.currentUser;
+
+  /// 현재 사용자 ID
+  String? get currentUserId => _supabase.auth.currentUser?.id;
 }
 
 /// 인증 서비스 Provider
